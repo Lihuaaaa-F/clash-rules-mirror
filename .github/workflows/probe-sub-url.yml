@@ -1,0 +1,23 @@
+name: probe-sub-url
+
+on:
+  workflow_dispatch:
+
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    steps:
+      # 只输出 HTTP 状态码，绝不输出 URL（Secret 注入，日志公开安全）
+      - name: Probe with clash UA
+        env:
+          SUB_URL: ${{ secrets.SUB_URL }}
+        run: |
+          code=$(curl -sS -o /dev/null -w "%{http_code}" --max-time 25 -A "clash-verge/2.4.0" "$SUB_URL" || true)
+          echo "HTTP_CODE_CLASH_UA=$code"
+
+      - name: Probe with default UA
+        env:
+          SUB_URL: ${{ secrets.SUB_URL }}
+        run: |
+          code=$(curl -sS -o /dev/null -w "%{http_code}" --max-time 25 "$SUB_URL" || true)
+          echo "HTTP_CODE_DEFAULT_UA=$code"
