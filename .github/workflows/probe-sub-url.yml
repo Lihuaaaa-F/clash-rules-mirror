@@ -7,6 +7,12 @@ jobs:
   probe:
     runs-on: ubuntu-latest
     steps:
+      - name: DNS resolution check
+        run: |
+          echo "DNS_A_RECORDS:"
+          dig +short 9693w.no-mad-sub.one @1.1.1.1 || true
+          echo "DNS_NXDOMAIN_CHECK_DONE"
+
       # 只输出 HTTP 状态码，绝不输出 URL（Secret 注入，日志公开安全）
       - name: Probe with clash UA
         env:
