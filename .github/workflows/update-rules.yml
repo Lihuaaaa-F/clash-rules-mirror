@@ -1,0 +1,43 @@
+name: update-rules
+
+on:
+  schedule:
+    # UTC 00:30 = 北京时间 08:30；避开整点调度高峰，GitHub 定时任务常有分钟级延迟
+    - cron: "30 0 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: update-rules
+  cancel-in-progress: false
+
+jobs:
+  mirror:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Download latest rules from Loyalsoldier/clash-rules
+        run: |
+          set -euo pipefail
+          BASE="https://raw.githubusercontent.com/Loyalsoldier/clash-rules/release"
+          FILES="reject icloud apple google proxy direct private gfw tld-not-cn telegramcidr cncidr lancidr applications"
+          for f in $FILES; do
+            curl -fsSL --retry 3 --connect-timeout 20 "$BASE/$f.txt" -o "rules/$f.txt"
+            head -1 "rules/$f.txt" | grep -q "^payload:" || { echo "::error::$f.txt 格式异常（非 payload 开头）"; exit 1; }
+          done
+
+      - name: Commit and push if changed
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add rules
+          if git diff --cached --quiet; then
+            echo "上游无变更，跳过提交"
+          else
+            git commit -m "chore: sync upstream rules $(date -u +%F)"
+            git push
+          fi
